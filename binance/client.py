@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 from .helpers import interval_to_milliseconds, convert_ts_str
 from .exceptions import BinanceAPIException, BinanceRequestException, NotImplementedException
 from .enums import HistoricalKlinesType
+from .interface_adapter import InterfaceAdapter
 
 
 class BaseClient:
@@ -291,19 +292,25 @@ class Client(BaseClient):
     def __init__(
         self, api_key: Optional[str] = None, api_secret: Optional[str] = None,
         requests_params: Dict[str, str] = None, tld: str = 'com',
-        testnet: bool = False
+        testnet: bool = False, interface = None
     ):
 
         super().__init__(api_key, api_secret, requests_params, tld, testnet)
 
+        self.interface = interface
+
         # init DNS and SSL cert
         self.ping()
+
 
     def _init_session(self) -> requests.Session:
 
         headers = self._get_headers()
 
         session = requests.session()
+        for prefix in ('http://', 'https://'):
+            session.mount(prefix, InterfaceAdapter(iface=self.interface))
+
         session.headers.update(headers)
         return session
 
